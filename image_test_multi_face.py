@@ -43,9 +43,11 @@ def image_test_multi_face(args, source_aligned_images, target_aligned_images):
         target_name = args.target_img_path[args.target_img_path.rfind('/'):]
     else:
         target_name = args.target_img_path
-    origin_att_img = cv2.imread(args.target_img_path)
+    origin_att_img = cv2.imread(args.target_img_path) # align 작업을 거치지 않은 원본 target image
     #id_emb, id_feature = get_id_emb(id_net, base_path + '_aligned.png')
 
+    # print('source_aligned_images : ',source_aligned_images)
+    # print('target_aligned_images : ',target_aligned_images)
 
     for idx, target_aligned_image in enumerate(target_aligned_images):
         id_emb, id_feature = get_id_emb_from_image(id_net, source_aligned_images[idx % len(source_aligned_images)][0])
@@ -66,12 +68,7 @@ def image_test_multi_face(args, source_aligned_images, target_aligned_images):
         back_matrix = target_aligned_images[idx % len(target_aligned_images)][1]
         mask = np.transpose(mask[0].numpy(), (1, 2, 0))
         origin_att_img = dealign(res, origin_att_img, back_matrix, mask)
-        '''
-        if args.merge_result:
-            back_matrix = np.load(base_path + '_back.npy')
-            mask = np.transpose(mask[0].numpy(), (1, 2, 0))
-            res = dealign(res, origin_att_img, back_matrix, mask)
-            '''
+
     cv2.imwrite(os.path.join(args.output_dir, os.path.basename(target_name.format(idx))), origin_att_img)
     result_img_path = os.path.join(args.output_dir, os.path.basename(target_name.format(idx)))
     gfpgan_gogo(result_img_path)

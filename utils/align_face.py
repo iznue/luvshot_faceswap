@@ -12,9 +12,10 @@ def align_with_five_points(src_points, size=224):
         [62.72990036,  92.20410156]
     ]
     REFERENCE_FACIAL_POINTS = np.array(REFERENCE_FACIAL_POINTS)
-    REFERENCE_FACIAL_POINTS[:, 0] += 8
+    REFERENCE_FACIAL_POINTS[:, 0] += 8 # 8
+    # print('facial points 1 : ', REFERENCE_FACIAL_POINTS)
     REFERENCE_FACIAL_POINTS *= size / 112.0
-
+    # print('facial points : ', REFERENCE_FACIAL_POINTS)
 
     dst_points = REFERENCE_FACIAL_POINTS
     # align dst to src
@@ -22,11 +23,12 @@ def align_with_five_points(src_points, size=224):
     dst_pts = np.matrix(dst_points.astype(np.float64))
 
     tfm = np.float32([[1, 0, 0], [0, 1, 0]])
-    n_pts = src_pts.shape[0]
+    n_pts = src_pts.shape[0] # n_pts = 5
     ones = np.ones((n_pts, 1), src_pts.dtype)
     src_pts_ = np.hstack([src_pts, ones])
     dst_pts_ = np.hstack([dst_pts, ones])
 
+    # print('np.linalg:', np.linalg.lstsq(src_pts_, dst_pts_))
     A, res, rank, s = np.linalg.lstsq(src_pts_, dst_pts_)
 
     if rank == 3:
@@ -51,7 +53,7 @@ def back_matrix(affine_matrix):
     return back_matrix
 
 
-def align_img(img, src_lmks, size=224):
+def align_img(img, src_lmks, size=224): # size=224
     M = align_with_five_points(src_lmks, size)
     aligned_img = cv2.warpAffine(img, M, (size, size), flags=cv2.INTER_LINEAR)
     return aligned_img, back_matrix(M[:2])
@@ -65,7 +67,7 @@ def dealign(generated, origin, back_affine_matrix,  mask):
     mask = cv2.dilate(mask, kernel)
     mask = cv2.erode(mask,kernel,iterations=2)
 
-    mask = cv2.blur(mask,(7,7))
+    mask = cv2.blur(mask,(77,77)) # (7,7)
 
     mask_1 = np.zeros_like(mask, dtype=np.float32)
     mask_1[10:-10, 10:-10] = 1.0

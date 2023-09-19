@@ -16,6 +16,7 @@ class LandmarkModel():
             if onnx_file.find('_selfgen_')>0:
                 continue
             model = model_zoo.get_model(onnx_file)
+            print(model)
             if model.taskname not in self.models:
                 print('find model:', onnx_file, model.taskname)
                 self.models[model.taskname] = model
@@ -26,21 +27,23 @@ class LandmarkModel():
         self.det_model = self.models['detection']
 
 
-    def prepare(self, ctx_id, det_thresh=0.5, det_size=(640, 640), mode ='None'):
+    def prepare(self, ctx_id, det_thresh=0.2, det_size=(640, 640), mode ='None'): #det_thresh=0.5
         self.det_thresh = det_thresh
         self.mode = mode
         assert det_size is not None
         print('set det-size:', det_size)
         self.det_size = det_size
         for taskname, model in self.models.items():
+            # print('taskname & model :', taskname, model)
             if taskname=='detection':
                 model.prepare(ctx_id, input_size=det_size)
             else:
                 model.prepare(ctx_id)
 
-
+    # video_test에만 사용
     def get(self, img, max_num=0):
-        bboxes, kpss = self.det_model.detect(img, threshold=self.det_thresh, max_num=max_num, metric='default')
+        # bboxes, kpss = self.det_model.detect(img, threshold=self.det_thresh, max_num=max_num, metric='default')
+        bboxes, kpss = self.det_model.detect(img, max_num=max_num, metric='default')
         if bboxes.shape[0] == 0:
             return None
         det_score = bboxes[..., 4]

@@ -80,7 +80,8 @@ def face_align(landmarkModel, image_path, merge_result=False, image_size=224): #
     for path in img_list:
         img = cv2.imread(path)
         landmark = landmarkModel.get(img)
-        # print(landmark)
+        print(landmark)
+        
         if landmark is not None:
             base_path = path.replace('.png', '').replace('.jpg', '').replace('.jpeg', '')
             aligned_img, back_matrix = align_img(img, landmark, image_size)

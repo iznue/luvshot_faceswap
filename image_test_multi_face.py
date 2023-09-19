@@ -10,19 +10,8 @@ from utils.align_face import back_matrix, dealign, align_img
 from utils.util import paddle2cv, cv2paddle
 from utils.prepare_data import LandmarkModel
 
-def get_id_emb(id_net, id_img_path):
-    id_img = cv2.imread(id_img_path)
-
-    id_img = cv2.resize(id_img, (112, 112))
-    id_img = cv2paddle(id_img)
-    mean = paddle.to_tensor([[0.485, 0.456, 0.406]]).reshape((1, 3, 1, 1))
-    std = paddle.to_tensor([[0.229, 0.224, 0.225]]).reshape((1, 3, 1, 1))
-    id_img = (id_img - mean) / std
-
-    id_emb, id_feature = id_net(id_img)
-    id_emb = l2_norm(id_emb)
-
-    return id_emb, id_feature
+from gfpgan import GFPGANer
+from PIL import Image
 
 def get_id_emb_from_image(id_net, id_img):
     id_img = cv2.resize(id_img, (112, 112))
@@ -37,7 +26,7 @@ def get_id_emb_from_image(id_net, id_img):
 
 def image_test_multi_face(args, source_aligned_images, target_aligned_images):
     #paddle.set_device("gpu" if args.use_gpu else 'cpu')
-    paddle.set_device("gpu" if args.use_gpu else 'cpu')
+    paddle.set_device("cpu" if args.use_gpu else 'cpu')
     faceswap_model = FaceSwap(args.use_gpu)
 
     id_net = ResNet(block=IRBlock, layers=[3, 4, 23, 3])
@@ -84,23 +73,8 @@ def image_test_multi_face(args, source_aligned_images, target_aligned_images):
             res = dealign(res, origin_att_img, back_matrix, mask)
             '''
     cv2.imwrite(os.path.join(args.output_dir, os.path.basename(target_name.format(idx))), origin_att_img)
-
-
-def face_align(landmarkModel, image_path, merge_result=False, image_size=224):
-    if os.path.isfile(image_path):
-        img_list = [image_path]
-    else:
-        img_list = [os.path.join(image_path, x) for x in os.listdir(image_path) if x.endswith('png') or x.endswith('jpg') or x.endswith('jpeg')]
-    for path in img_list:
-        img = cv2.imread(path)
-        landmark = landmarkModel.get(img)
-        if landmark is not None:
-            base_path = path.replace('.png', '').replace('.jpg', '').replace('.jpeg', '')
-            aligned_img, back_matrix = align_img(img, landmark, image_size)
-            # np.save(base_path + '.npy', landmark)
-            cv2.imwrite(base_path + '_aligned.png', aligned_img)
-            if merge_result:
-                np.save(base_path + '_back.npy', back_matrix)
+    result_img_path = os.path.join(args.output_dir, os.path.basename(target_name.format(idx)))
+    gfpgan_gogo(result_img_path)
 
 def faces_align(landmarkModel, image_path, image_size=224):
     aligned_imgs =[]
@@ -108,14 +82,41 @@ def faces_align(landmarkModel, image_path, image_size=224):
         img_list = [image_path]
     else:
         img_list = [os.path.join(image_path, x) for x in os.listdir(image_path) if x.endswith('png') or x.endswith('jpg') or x.endswith('jpeg')]
+    
+    # print('img_list : ', img_list)
     for path in img_list:
+        # print('img_path : ', path)
         img = cv2.imread(path)
         landmarks = landmarkModel.gets(img)
+        # print('landmark : ', landmarks)
         for landmark in landmarks:
             if landmark is not None:
                 aligned_img, back_matrix = align_img(img, landmark, image_size)
                 aligned_imgs.append([aligned_img, back_matrix])
     return aligned_imgs
+
+def gfpgan_gogo(img):
+    img = Image.open(img)
+    original_img = img.copy()
+    np_img = np.array(img)
+
+    device = 'cpu'
+    model = GFPGANer(model_path='./models/GFPGANv1.4.pth', upscale=1, arch='clean', channel_multiplier=2, bg_upsampler=None, device=device)
+    np_img_bgr = np_img[:, :, ::-1]
+    _, _, gfpgan_output_bgr = model.enhance(np_img_bgr, has_aligned=False, only_center_face=False, paste_back=True)
+    np_img = gfpgan_output_bgr[:, :, ::-1]
+
+    restored_img = Image.fromarray(np_img)
+    # restored_img.show()
+    result_img = Image.blend(
+        original_img, restored_img, 1
+    )
+
+    result_img.show()
+    base_path = './results_gfpgan/'
+    result_img_np = np.array(result_img)
+    result_img_rgb = result_img_np[:, :, ::-1]
+    cv2.imwrite(base_path + 'gfpgan_img.png', result_img_rgb)
 
 
 if __name__ == '__main__':
@@ -138,9 +139,3 @@ if __name__ == '__main__':
         target_aligned_images = faces_align(landmarkModel, args.target_img_path, args.image_size)
     os.makedirs(args.output_dir, exist_ok=True)
     image_test_multi_face(args, source_aligned_images, target_aligned_images)
-
-
-
-
-
-

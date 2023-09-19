@@ -34,7 +34,7 @@ class LandmarkModel():
         print('set det-size:', det_size)
         self.det_size = det_size
         for taskname, model in self.models.items():
-            # print('taskname & model :', taskname, model)
+            print('taskname & model :', taskname, model)
             if taskname=='detection':
                 model.prepare(ctx_id, input_size=det_size)
             else:
@@ -57,9 +57,9 @@ class LandmarkModel():
         return kps
 
     def gets(self, img, max_num=0):
-        bboxes, kpss = self.det_model.detect(img, threshold=self.det_thresh, max_num=max_num, metric='default')
+        bboxes, kpss = self.det_model.detect(img, max_num=max_num, metric='default')
         return kpss
 
-    def gets(self, img, max_num=0):
-        bboxes, kpss = self.det_model.detect(img, threshold=self.det_thresh, max_num=max_num, metric='default')
-        return kpss
+    # def gets(self, img, max_num=0):
+    #     bboxes, kpss = self.det_model.detect(img, threshold=self.det_thresh, max_num=max_num, metric='default')
+    #     return kpss
